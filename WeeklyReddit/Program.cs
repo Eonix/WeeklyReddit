@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
+using FluentScheduler;
 using Microsoft.Extensions.Configuration;
 using WeeklyReddit.Services;
 
@@ -8,7 +8,7 @@ namespace WeeklyReddit
 {
     public class Program
     {
-        public static async Task Main()
+        public static void Main()
         {
             try
             {
@@ -18,13 +18,14 @@ namespace WeeklyReddit
 
                 var configuration = builder.Build();
 
-                if (configuration.AsEnumerable().Any(pair => pair.Value == "replace-me"))
-                {
-                    throw new Exception("You forgot to replace one of the environment variables.");
-                }
+                JobManager.UseUtcTime();
+                JobManager.JobException += x => Console.WriteLine($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
 
                 Console.WriteLine("Weekly Reddit Started!");
-                await GenerateNewsletterAsync(configuration);
+
+                var registry = new Registry();
+                registry.Schedule(async () => await GenerateNewsletterAsync(configuration)).ToRunEvery(0).Weeks()
+                    .On(DayOfWeek.Friday).At(12, 0);
             }
             catch (Exception exception)
             {
@@ -34,11 +35,14 @@ namespace WeeklyReddit
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();
+
+            JobManager.Stop();
             Console.WriteLine("Program ended.");
         }
 
         private static async Task GenerateNewsletterAsync(IConfiguration configuration)
         {
+            Console.WriteLine($"{DateTime.Now}: Generating newsletter.");
             const string title = "Weekly Newsletter of Reddit";
 
             var redditOptions = new RedditOptions
