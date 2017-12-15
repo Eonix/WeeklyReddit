@@ -51,7 +51,7 @@ namespace WeeklyReddit.Services
 
             foreach (var subreddit in await GetSubreddits())
             {
-                var response = await Enqueue(() => _httpClient.GetAsync($"https://oauth.reddit.com/r/{subreddit}/top?t=week&limit=5"));
+                var response = await Enqueue(() => _httpClient.GetAsync($"https://oauth.reddit.com/r/{subreddit}/top?t=week&limit=3"));
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
