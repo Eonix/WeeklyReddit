@@ -63,6 +63,7 @@ namespace WeeklyReddit
         ClientSecret = configuration["reddit:clientSecret"]
       };
 
+      Log("Fetching content...");
       using (var redditClient = await RedditClient.CreateAsync(redditOptions))
       {
         var subreddits = await redditClient.GetSubredditsTopPosts();
@@ -76,6 +77,7 @@ namespace WeeklyReddit
           Trendings = trendings
         };
 
+        Log("Generating email...");
         var html = await DataFormatter.GenerateHtmlAsync(formatterOptions);
 
         var emailOptions = new EmailOptions
@@ -86,6 +88,7 @@ namespace WeeklyReddit
           SmtpPort = Convert.ToInt32(configuration["smtpSettings:port"]),
         };
 
+        Log("Sending email...");
         using (var emailClient = new EmailClient(emailOptions))
         {
           var content = new EmailContent
@@ -99,6 +102,8 @@ namespace WeeklyReddit
           await emailClient.SendAsync(content);
         }
       }
+
+      Log("Newsletter sent!");
     }
   }
 }
