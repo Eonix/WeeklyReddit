@@ -1,68 +1,88 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using MailBodyPack;
 
 namespace WeeklyReddit.Services
 {
     public class DataFormatter
     {
-        public static async Task<string> GenerateHtmlAsync(FormatterOptions options)
+        private static MailBodyTemplate GetCustomTemplate()
         {
-            var contentBuilder = new StringBuilder();
+            return MailBodyTemplate.GetDefaultTemplate()
+                .Title(x => $"<h1 style=\"color:#333;margin: 0; padding: 20px 0 0 0;\">{x.Content}</h1>")
+                .Text(x => x.Attributes?.id == "issue-date"
+                    ? $"<span style=\"color:#333;font-size:12px;\">{x.Content}</span>"
+                    : x.Content)
+                .SubTitle(x =>
+                    x.Attributes?.className != "section-title"
+                        ? $"<h2>{x.Content}</h2>"
+                        : $"<h2 style=\"color:#369;font-size:16px;margin-bottom:3px;text-transform:uppercase;\">{x.Content}</h2>")
+                .LineBreak(x =>
+                    x.Attributes?.className != "hr"
+                        ? "<br />"
+                        : "<hr style=\"border-style:none;margin-top:0px;margin-bottom:5px;border-top-style:solid;border-top-color:#9b9b9b;\" />")
+                .Link(CustomLink);
+        }
 
-            contentBuilder.AppendLine(
-                $"<h2 style=\"font-family:ubuntu, 'Lucida Grande', Arial, sans-serif;padding-top:20px;padding-bottom:0;padding-right:0;padding-left:0;color:#369;font-size:16px;font-weight:bold;margin-top:20px;margin-bottom:3px;margin-right:0;margin-left:0;text-transform:uppercase;\"><span style=\"color:#333\">#</span>trending</h2>");
-            contentBuilder.AppendLine(
-                "<hr style=\"border-style:none;margin-top:0px;margin-bottom:5px;margin-right:0;margin-left:0;border-top-width:1px;border-top-style:solid;border-top-color:#9b9b9b;\" />");
+        private static MailBlockFluent GetSection(string sectionTitle, IEnumerable<RedditPost> posts)
+        {
+            var sectionHeader = MailBody.CreateBlock()
+                .SubTitle($"#{sectionTitle}", new {className = "section-title"})
+                .LineBreak(new {className = "hr"});
 
-            foreach (var trending in options.Trendings)
+            if (!posts.Any())
             {
-                contentBuilder.AppendLine(
-                    $"<p style=\"font-family:ubuntu, Helvetica, 'Lucida Grande', Arial, sans-serif;padding-top:0;padding-bottom:0;padding-right:0;padding-left:0;color:#363636;font-size:16px;line-height:22px;margin-top:0;margin-bottom:10px;margin-right:0;margin-left:0;width:100%;\"><a href=\"{trending.Url}\" target=\"_blank\" style=\"color:#0446AB;text-decoration:underline; font-size:17px;\">{trending.Title}</a></p>");
+                sectionHeader.Paragraph("No posts this week. :(");
+                return sectionHeader;
             }
+
+            foreach (var post in posts)
+            {
+                var postLink = MailBody.CreateBlock().Link(post.Url, post.Title, new {className = "post-link"});
+                
+                if (post.CommentsUrl != post.Url)
+                {
+                    postLink.LineBreak().Link(post.CommentsUrl, "// comments", new {className = "comments-link"});
+                }
+                    
+                sectionHeader.Paragraph(postLink);
+            }
+
+            return sectionHeader;
+        }
+
+        public static string GenerateHtml(FormatterOptions options)
+        {
+            var template = GetCustomTemplate();
+
+            var body = MailBody.CreateBody(template)
+                .Title(options.Title)
+                .Text($"Issue {options.IssueDate.ToLongDateString()}", new { id = "issue-date" })
+                .Paragraph(GetSection("trending", options.Trendings));
 
             foreach (var subreddit in options.Subreddits)
             {
-                contentBuilder.AppendLine(
-                    $"<h2 style=\"font-family:ubuntu, 'Lucida Grande', Arial, sans-serif;padding-top:20px;padding-bottom:0;padding-right:0;padding-left:0;color:#369;font-size:16px;font-weight:bold;margin-top:20px;margin-bottom:3px;margin-right:0;margin-left:0;text-transform:uppercase;\"><span style=\"color:#333\">#</span>{subreddit.Name}</h2>");
-                contentBuilder.AppendLine(
-                    "<hr style=\"border-style:none;margin-top:0px;margin-bottom:5px;margin-right:0;margin-left:0;border-top-width:1px;border-top-style:solid;border-top-color:#9b9b9b;\" />");
-
-                if (!subreddit.TopPosts.Any())
-                {
-                    contentBuilder.AppendLine("<p style=\"font-family:ubuntu, Helvetica, 'Lucida Grande', Arial, sans-serif;padding-top:0;padding-bottom:0;padding-right:0;padding-left:0;color:#363636;font-size:16px;line-height:22px;margin-top:0;margin-bottom:10px;margin-right:0;margin-left:0;width:100%;\">No posts this week. :(</p>");
-                }
-
-                foreach (var post in subreddit.TopPosts)
-                {
-                    var commentsLink = post.CommentsUrl != post.Url
-                        ? $"<br><span style=\"font-size: 13px; color: #777\"><span style=\"font-size:11px;padding-right:1px;\">//</span> <a style=\"text-decoration: none; color: #336699;\" href=\"{post.CommentsUrl}\" target=\"_blank\">comments</a></span>"
-                        : null;
-
-                    contentBuilder.AppendLine(
-                        $"<p style=\"font-family:ubuntu, Helvetica, 'Lucida Grande', Arial, sans-serif;padding-top:0;padding-bottom:0;padding-right:0;padding-left:0;color:#363636;font-size:16px;line-height:22px;margin-top:0;margin-bottom:10px;margin-right:0;margin-left:0;width:100%;\"><a href=\"{post.Url}\" target=\"_blank\" style=\"color:#0446AB;text-decoration:underline; font-size:17px;\">{post.Title}</a>{commentsLink}</p>");
-                }
+                body.Paragraph(GetSection(subreddit.Name, subreddit.TopPosts));
             }
 
-            var templateBuilder = new StringBuilder(await GetTemplateFileContentsAsync());
-
-            templateBuilder.Replace("{Content}", contentBuilder.ToString());
-            templateBuilder.Replace("{Title}", options.Title);
-            templateBuilder.Replace("{IssueDate}", options.IssueDate.ToLongDateString());
-
-            return templateBuilder.ToString();
+            return body.ToString();
+            
         }
 
-        private static async Task<string> GetTemplateFileContentsAsync()
+        private static string CustomLink(ActionElement actionElement)
         {
-            var assembly = typeof(DataFormatter).GetTypeInfo().Assembly;
-            var resourceStream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.template.html");
-            using (var streamReader = new StreamReader(resourceStream))
+            if (actionElement.Attributes?.className == "post-link")
             {
-                return await streamReader.ReadToEndAsync();
+                return $"<a href=\"{actionElement.Link}\" target=\"_blank\">{actionElement.Content}</a>";
             }
+
+            if (actionElement.Attributes?.className == "comments-link")
+            {
+                return
+                    $"<a style=\"font-size: 13px; text-decoration: none; color: #336699;\" href=\"{actionElement.Link}\" target=\"_blank\">{actionElement.Content}</a>";
+            }
+
+            return $"<a href='{actionElement.Link}'>{actionElement.Content}</a>";
         }
     }
 }

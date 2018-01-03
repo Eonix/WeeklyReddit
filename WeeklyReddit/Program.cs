@@ -84,7 +84,7 @@ namespace WeeklyReddit
                 };
 
                 Log("Generating email...");
-                var html = await DataFormatter.GenerateHtmlAsync(formatterOptions);
+                var html = DataFormatter.GenerateHtml(formatterOptions);
 
                 var emailOptions = new EmailOptions
                 {
