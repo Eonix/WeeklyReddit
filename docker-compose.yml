@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  weeklyreddit:
+    image: weekly-reddit
+    build:
+      context: .
+      dockerfile: WeeklyReddit/Dockerfile

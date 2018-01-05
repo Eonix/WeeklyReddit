@@ -1,17 +1,19 @@
-FROM microsoft/dotnet:2.0-sdk AS build-env
+FROM microsoft/dotnet:2.0-runtime AS base
 WORKDIR /app
 
-# copy csproj and restore as distinct layers
-COPY *.csproj ./
+FROM microsoft/dotnet:2.0-sdk AS build
+WORKDIR /src
+COPY *.sln ./
+COPY WeeklyReddit/WeeklyReddit.csproj WeeklyReddit/
 RUN dotnet restore
+COPY . .
+WORKDIR /src/WeeklyReddit
+RUN dotnet build -c Release -o /app
 
-# copy and build everything else
-COPY . ./
-RUN dotnet publish -c Release -o out
+FROM build AS publish
+RUN dotnet publish -c Release -o /app
 
-# build runtime image
-FROM microsoft/dotnet:2.0-runtime
+FROM base AS final
 WORKDIR /app
-COPY --from=build-env /app/out ./
-
+COPY --from=publish /app .
 ENTRYPOINT ["dotnet", "WeeklyReddit.dll"]

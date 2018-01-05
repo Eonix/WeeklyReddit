@@ -11,51 +11,38 @@ namespace WeeklyReddit
     {
         public static void Main(string[] args)
         {
-            try
-            {
-                var builder = new ConfigurationBuilder();
-                builder.AddJsonFile(@"C:\dev\secrets\WeeklyReddit\appsettings.json", true); // dev settings.
-                builder.AddEnvironmentVariables();
-
-                var configuration = builder.Build();
-
-                JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
-                JobManager.UseUtcTime();
-
-                Log("Weekly Reddit Started!");
-
-                var registry = new Registry();
-                registry.Schedule(() =>
-                    GenerateNewsletterAsync(configuration).ConfigureAwait(false).GetAwaiter().GetResult()).ToRunEvery(0)
-                  .Weeks()
-                  .On(DayOfWeek.Friday).At(12, 0);
-
-                JobManager.Initialize(registry);
-                JobManager.Start();
-
-                if (args.Contains("--testrun"))
-                {
-                    GenerateNewsletterAsync(configuration).Wait();
-                }
-            }
-            catch (Exception exception)
-            {
-                Log("Unhandled exception!");
-                Log(exception.ToString());
-            }
-
-            Log("Press enter to quit.");
-            Console.ReadLine();
+            AppHost.RunAndBlock(Start);
 
             JobManager.Stop();
-            Log("Program ended.");
+        }
+
+        private static void Start()
+        {
+            var builder = new ConfigurationBuilder();
+            builder.AddJsonFile(@"C:\dev\secrets\WeeklyReddit\appsettings.json", true); // dev settings.
+            builder.AddEnvironmentVariables();
+
+            var configuration = builder.Build();
+
+            JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
+            JobManager.UseUtcTime();
+            
+            var registry = new Registry();
+            registry.Schedule(() =>
+                    GenerateNewsletterAsync(configuration).ConfigureAwait(false).GetAwaiter().GetResult()).ToRunEvery(0)
+                .Weeks()
+                .On(DayOfWeek.Friday).At(12, 0);
+
+            JobManager.Initialize(registry);
+            JobManager.Start();
+            Log("Weekly Reddit Started!");
         }
 
         private static void Log(string message)
         {
             Console.WriteLine($"{DateTime.UtcNow}: {message}");
         }
-
+        
         private static async Task GenerateNewsletterAsync(IConfiguration configuration)
         {
             Log("Generating newsletter.");
