@@ -4,7 +4,7 @@ using MailBodyPack;
 
 namespace WeeklyReddit.Services
 {
-    public class DataFormatter
+    public static class DataFormatter
     {
         private static MailBodyTemplate GetCustomTemplate()
         {

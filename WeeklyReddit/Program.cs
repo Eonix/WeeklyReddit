@@ -66,8 +66,8 @@ namespace WeeklyReddit
             Log("Fetching content...");
             using (var redditClient = await RedditClient.CreateAsync(redditOptions))
             {
-                var subreddits = await redditClient.GetSubredditsTopPosts();
                 var trendings = await redditClient.GetTrendings();
+                var subreddits = await redditClient.GetSubredditsTopPosts();
 
                 var formatterOptions = new FormatterOptions
                 {

@@ -28,6 +28,11 @@ namespace WeeklyReddit.Services
             return client;
         }
 
+        private string ParseThumbnail(string thumbnailUrl)
+        {
+            return thumbnailUrl == "self" ? "https://www.redditstatic.com/icon.png" : thumbnailUrl;
+        }
+
         public async Task<IEnumerable<RedditPost>> GetTrendings()
         {
             var response = await Enqueue(() => _httpClient.GetAsync("https://oauth.reddit.com/r/trendingsubreddits/new?limit=7"));
@@ -41,7 +46,12 @@ namespace WeeklyReddit.Services
                 {
                     Title = data["title"].Value<string>(),
                     Url = data["url"].Value<string>(),
-                    CommentsUrl = "https://www.reddit.com" + data["permalink"].Value<string>()
+                    CommentsUrl = "https://www.reddit.com" + data["permalink"].Value<string>(),
+                    Comments = data["num_comments"].Value<int>(),
+                    Domain = data["domain"].Value<string>(),
+                    Nsfw = data["over_18"].Value<bool>(),
+                    Score = data["score"].Value<int>(),
+                    ThumbnailUrl = ParseThumbnail(data["thumbnail"].Value<string>())
                 }).ToList();
         }
 
@@ -62,7 +72,12 @@ namespace WeeklyReddit.Services
                     {
                         Title = data["title"].Value<string>(),
                         Url = data["url"].Value<string>(),
-                        CommentsUrl = "https://www.reddit.com" + data["permalink"].Value<string>()
+                        CommentsUrl = "https://www.reddit.com" + data["permalink"].Value<string>(),
+                        Comments = data["num_comments"].Value<int>(),
+                        Domain = data["domain"].Value<string>(),
+                        Nsfw = data["over_18"].Value<bool>(),
+                        Score = data["score"].Value<int>(),
+                        ThumbnailUrl = ParseThumbnail(data["thumbnail"].Value<string>())
                     });
 
                 subreddits.Add(new Subreddit{Name = subreddit, TopPosts = redditPosts});
