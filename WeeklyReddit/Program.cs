@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentScheduler;
@@ -7,10 +8,15 @@ using WeeklyReddit.Services;
 
 namespace WeeklyReddit
 {
-    public class Program
+    public static class Program
     {
+        private static bool runOnStart;
+
         public static void Main(string[] args)
         {
+            if (args.Contains("-run"))
+                runOnStart = true;
+
             AppHost.RunAndBlock(Start);
 
             JobManager.Stop();
@@ -19,9 +25,7 @@ namespace WeeklyReddit
         private static void Start()
         {
             var builder = new ConfigurationBuilder();
-            builder.AddJsonFile(@"C:\dev\secrets\WeeklyReddit\appsettings.json", true); // dev settings.
-            builder.AddEnvironmentVariables();
-
+            builder.AddJsonFile(Path.Combine(Environment.CurrentDirectory, "appsettings.json"));
             var configuration = builder.Build();
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
@@ -36,6 +40,9 @@ namespace WeeklyReddit
             JobManager.Initialize(registry);
             JobManager.Start();
             Log("Weekly Reddit Started!");
+
+            if (runOnStart)
+                GenerateNewsletterAsync(configuration).Wait();
         }
 
         private static void Log(string message)

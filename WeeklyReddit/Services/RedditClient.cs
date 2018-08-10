@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace WeeklyReddit.Services
 {
-    public class RedditClient : IDisposable
+    public sealed class RedditClient : IDisposable
     {
         private readonly HttpClient _httpClient = new HttpClient();
         private static DateTime _nextRequest = DateTime.Now;
@@ -76,11 +76,11 @@ namespace WeeklyReddit.Services
             _httpClient.Dispose();
         }
 
-        /// <remarks>
+        /// <summary>
         /// This is a naive throttling mechanism. It is not thread safe, so don't even think about
         /// calling methods that use this throttle, concurrently. Could potentially be made more
         /// robust using a semaphore lock to prevent concurrent execution.
-        /// </remarks>
+        /// </summary>
         private static async Task<TResult> Enqueue<TResult>(Func<Task<TResult>> func)
         {
             var delta = _nextRequest - DateTime.Now;
