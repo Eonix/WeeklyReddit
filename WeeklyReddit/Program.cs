@@ -11,11 +11,15 @@ namespace WeeklyReddit
     public static class Program
     {
         private static bool runOnStart;
+        private static string configPath;
 
         public static void Main(string[] args)
         {
-            if (args.Contains("-run"))
+            if (args.Contains("-r")) // Run now
                 runOnStart = true;
+
+            if (args.Contains("-c")) // Config path
+                configPath = args[Array.IndexOf(args, "-c") + 1];
 
             AppHost.RunAndBlock(Start);
 
@@ -25,7 +29,11 @@ namespace WeeklyReddit
         private static void Start()
         {
             var builder = new ConfigurationBuilder();
-            builder.AddJsonFile(Path.Combine(Environment.CurrentDirectory, "appsettings.json"));
+            if (string.IsNullOrWhiteSpace(configPath))
+                builder.AddJsonFile(Path.Combine(Environment.CurrentDirectory, "appsettings.json"));
+            else
+                builder.AddJsonFile(configPath);
+
             var configuration = builder.Build();
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
