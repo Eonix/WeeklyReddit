@@ -61,7 +61,7 @@ namespace WeeklyReddit
         private static async Task GenerateNewsletterAsync(IConfiguration configuration)
         {
             Log("Generating newsletter.");
-            const string title = "Weekly Newsletter of Reddit";
+            const string title = "Weekly Reddit";
 
             var redditOptions = new RedditOptions
             {

@@ -30,7 +30,7 @@ namespace WeeklyReddit.Services
 
         private string ParseThumbnail(string thumbnailUrl)
         {
-            return thumbnailUrl == "self" ? "https://www.redditstatic.com/icon.png" : thumbnailUrl;
+            return thumbnailUrl == "self" ? null : thumbnailUrl;
         }
 
         public async Task<IEnumerable<RedditPost>> GetTrendings()
