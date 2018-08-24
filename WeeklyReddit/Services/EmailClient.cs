@@ -5,7 +5,7 @@ using MimeKit;
 
 namespace WeeklyReddit.Services
 {
-    public class EmailClient : IDisposable
+    public sealed class EmailClient : IDisposable
     {
         private readonly EmailOptions _options;
         private readonly SmtpClient _smtpClient = new SmtpClient();
@@ -13,7 +13,7 @@ namespace WeeklyReddit.Services
         public EmailClient(EmailOptions options)
         {
             _options = options;
-            _smtpClient.ServerCertificateValidationCallback += (sender, certificate, chain, errors) => true;
+            _smtpClient.ServerCertificateValidationCallback += (_, __, ___, ____) => true;
             _smtpClient.AuthenticationMechanisms.Remove("XOAUTH2");
         }
 

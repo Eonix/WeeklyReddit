@@ -102,7 +102,7 @@ namespace WeeklyReddit
                     var content = new EmailContent
                     {
                         Content = html,
-                        Subject = $"{title} // {DateTime.Today.ToLongDateString()}",
+                        Subject = $"{title} for {redditOptions.Username} // {DateTime.Today.ToLongDateString()}",
                         FromName = title,
                         FromAddress = configuration["emailSettings:fromAddress"],
                         To = configuration["emailSettings:toAddress"]

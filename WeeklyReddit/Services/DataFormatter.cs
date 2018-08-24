@@ -33,7 +33,8 @@ namespace WeeklyReddit.Services
 
             if (!posts.Any())
             {
-                sectionHeader.Paragraph("No posts this week. :(").LineBreak().Link($"https://www.reddit.com/r/{sectionTitle}", $"Go to {sectionTitle}", new { Id = "empty-link" });
+                var noPosts = MailBody.CreateBlock().Text("No posts this week. :(").LineBreak().Link($"https://www.reddit.com/r/{sectionTitle}", $"Go to {sectionTitle}", new { Id = "empty-link" });
+                sectionHeader.Paragraph(noPosts);
                 return sectionHeader;
             }
 
