@@ -77,37 +77,41 @@ namespace WeeklyReddit
                 var trendings = await redditClient.GetTrendings();
                 var subreddits = await redditClient.GetSubredditsTopPosts();
 
-                var formatterOptions = new FormatterOptions
+                var subredditBatches = subreddits.Batch(50).ToList();
+                for (int i = 1; i <= subredditBatches.Count; i++)
                 {
-                    Subreddits = subreddits,
-                    Title = title,
-                    IssueDate = DateTime.Today,
-                    Trendings = trendings
-                };
+                    var subredditBatch = subredditBatches[i - 1];
+                    var countString = subredditBatches.Count < 2 ? string.Empty : $"({i}/{subredditBatches.Count}) ";
 
-                Log("Generating email...");
-                var html = DataFormatter.GenerateHtml(formatterOptions);
-
-                var emailOptions = new EmailOptions
-                {
-                    Password = configuration["smtpSettings:password"],
-                    Username = configuration["smtpSettings:username"],
-                    SmtpServer = configuration["smtpSettings:server"],
-                    SmtpPort = Convert.ToInt32(configuration["smtpSettings:port"]),
-                };
-
-                Log("Sending email...");
-                using (var emailClient = new EmailClient(emailOptions))
-                {
-                    var content = new EmailContent
+                    Log($"Generating email {countString}...");
+                    var html = DataFormatter.GenerateHtml(new FormatterOptions
                     {
-                        Content = html,
-                        Subject = $"{title} for {redditOptions.Username} // {DateTime.Today.ToLongDateString()}",
-                        FromName = title,
-                        FromAddress = configuration["emailSettings:fromAddress"],
-                        To = configuration["emailSettings:toAddress"]
+                        Subreddits = subredditBatch,
+                        Title = title,
+                        IssueDate = DateTime.Today,
+                        Trendings = trendings
+                    });
+
+                    var emailOptions = new EmailOptions
+                    {
+                        Password = configuration["smtpSettings:password"],
+                        Username = configuration["smtpSettings:username"],
+                        SmtpServer = configuration["smtpSettings:server"],
+                        SmtpPort = Convert.ToInt32(configuration["smtpSettings:port"]),
                     };
-                    await emailClient.SendAsync(content);
+
+                    Log($"Sending email {countString}...");
+                    using (var emailClient = new EmailClient(emailOptions))
+                    {
+                        await emailClient.SendAsync(new EmailContent
+                        {
+                            Content = html,
+                            Subject = $"{title} for {redditOptions.Username} {countString}// {DateTime.Today.ToLongDateString()}",
+                            FromName = title,
+                            FromAddress = configuration["emailSettings:fromAddress"],
+                            To = configuration["emailSettings:toAddress"]
+                        });
+                    }
                 }
             }
 
