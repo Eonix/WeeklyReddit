@@ -297,4 +297,5 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
-/WeeklyReddit/appsettings.json
+
+appsettings.json
