@@ -37,8 +37,7 @@ namespace WeeklyReddit
             var configuration = builder.Build();
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
-            JobManager.UseUtcTime();
-            
+
             var registry = new Registry();
             registry.Schedule(() =>
                     GenerateNewsletterAsync(configuration).ConfigureAwait(false).GetAwaiter().GetResult()).ToRunEvery(0)
@@ -55,9 +54,9 @@ namespace WeeklyReddit
 
         private static void Log(string message)
         {
-            Console.WriteLine($"{DateTime.UtcNow}: {message}");
+            Console.WriteLine($"{DateTime.Now}: {message}");
         }
-        
+
         private static async Task GenerateNewsletterAsync(IConfiguration configuration)
         {
             Log("Generating newsletter.");
@@ -78,10 +77,10 @@ namespace WeeklyReddit
                 var subreddits = await redditClient.GetSubredditsTopPosts();
 
                 var subredditBatches = subreddits.Batch(50).ToList();
-                for (int i = 1; i <= subredditBatches.Count; i++)
+                for (int i = 0; i < subredditBatches.Count; i++)
                 {
-                    var subredditBatch = subredditBatches[i - 1];
-                    var countString = subredditBatches.Count < 2 ? string.Empty : $"({i}/{subredditBatches.Count}) ";
+                    var subredditBatch = subredditBatches[i];
+                    var countString = subredditBatches.Count < 2 ? string.Empty : $"({i + 1}/{subredditBatches.Count}) ";
 
                     Log($"Generating email {countString}...");
                     var html = DataFormatter.GenerateHtml(new FormatterOptions
@@ -89,7 +88,7 @@ namespace WeeklyReddit
                         Subreddits = subredditBatch,
                         Title = title,
                         IssueDate = DateTime.Today,
-                        Trendings = trendings
+                        Trendings = i == 0 ? trendings : Enumerable.Empty<RedditPost>()
                     });
 
                     var emailOptions = new EmailOptions
