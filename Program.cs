@@ -30,7 +30,7 @@ namespace WeeklyReddit
 
         private static void Start()
         {
-            var settings = JsonConvert.DeserializeObject<AppSettings>(configPath);
+            var settings = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(configPath));
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
 
