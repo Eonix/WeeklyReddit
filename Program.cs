@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentScheduler;
-using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using WeeklyReddit.Services;
 
 namespace WeeklyReddit
@@ -20,6 +20,8 @@ namespace WeeklyReddit
 
             if (args.Contains("-c")) // Config path
                 configPath = args[Array.IndexOf(args, "-c") + 1];
+            else
+                configPath = Path.Combine(Environment.CurrentDirectory, "appsettings.json");
 
             AppHost.RunAndBlock(Start);
 
@@ -28,19 +30,13 @@ namespace WeeklyReddit
 
         private static void Start()
         {
-            var builder = new ConfigurationBuilder();
-            if (string.IsNullOrWhiteSpace(configPath))
-                builder.AddJsonFile(Path.Combine(Environment.CurrentDirectory, "appsettings.json"));
-            else
-                builder.AddJsonFile(configPath);
-
-            var configuration = builder.Build();
+            var settings = JsonConvert.DeserializeObject<AppSettings>(configPath);
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
 
             var registry = new Registry();
             registry.Schedule(() =>
-                    GenerateNewsletterAsync(configuration).ConfigureAwait(false).GetAwaiter().GetResult()).ToRunEvery(0)
+                    GenerateNewsletterAsync(settings).ConfigureAwait(false).GetAwaiter().GetResult()).ToRunEvery(0)
                 .Weeks()
                 .On(DayOfWeek.Friday).At(12, 0);
 
@@ -49,7 +45,7 @@ namespace WeeklyReddit
             Log("Weekly Reddit Started!");
 
             if (runOnStart)
-                GenerateNewsletterAsync(configuration).Wait();
+                GenerateNewsletterAsync(settings).Wait();
         }
 
         private static void Log(string message)
@@ -57,17 +53,17 @@ namespace WeeklyReddit
             Console.WriteLine($"{DateTime.Now}: {message}");
         }
 
-        private static async Task GenerateNewsletterAsync(IConfiguration configuration)
+        private static async Task GenerateNewsletterAsync(AppSettings settings)
         {
             Log("Generating newsletter.");
             const string title = "Weekly Reddit";
 
             var redditOptions = new RedditOptions
             {
-                Username = configuration["reddit:username"],
-                Password = configuration["reddit:password"],
-                ClientId = configuration["reddit:clientId"],
-                ClientSecret = configuration["reddit:clientSecret"]
+                Username = settings.Reddit.Username,
+                Password = settings.Reddit.Password,
+                ClientId = settings.Reddit.ClientId,
+                ClientSecret = settings.Reddit.ClientSecret
             };
 
             Log("Fetching content...");
@@ -93,10 +89,10 @@ namespace WeeklyReddit
 
                     var emailOptions = new EmailOptions
                     {
-                        Password = configuration["smtpSettings:password"],
-                        Username = configuration["smtpSettings:username"],
-                        SmtpServer = configuration["smtpSettings:server"],
-                        SmtpPort = Convert.ToInt32(configuration["smtpSettings:port"]),
+                        Password = settings.SmtpSettings.Password,
+                        Username = settings.SmtpSettings.Username,
+                        SmtpServer = settings.SmtpSettings.Server,
+                        SmtpPort = settings.SmtpSettings.Port
                     };
 
                     Log($"Sending email {countString}...");
@@ -107,8 +103,8 @@ namespace WeeklyReddit
                             Content = html,
                             Subject = $"{title} for {redditOptions.Username} {countString}// {DateTime.Today.ToLongDateString()}",
                             FromName = title,
-                            FromAddress = configuration["emailSettings:fromAddress"],
-                            To = configuration["emailSettings:toAddress"]
+                            FromAddress = settings.EmailSettings.FromAddress,
+                            To = settings.EmailSettings.ToAddress
                         });
                     }
                 }
