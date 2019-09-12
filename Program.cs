@@ -34,11 +34,14 @@ namespace WeeklyReddit
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
 
+            var targetTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
+            var convertedTime = TimeZoneInfo.ConvertTime(DateTimeOffset.Now.Date.AddHours(16), targetTimeZone, TimeZoneInfo.Local);
+
             var registry = new Registry();
             registry.Schedule(() =>
                     GenerateNewsletterAsync(settings).ConfigureAwait(false).GetAwaiter().GetResult()).ToRunEvery(0)
                 .Weeks()
-                .On(DayOfWeek.Friday).At(12, 0);
+                .On(DayOfWeek.Friday).At(convertedTime.Hour, 0);
 
             JobManager.Initialize(registry);
             JobManager.Start();
@@ -72,7 +75,7 @@ namespace WeeklyReddit
                 var trendings = await redditClient.GetTrendings();
                 var subreddits = await redditClient.GetSubredditsTopPosts();
 
-                var subredditBatches = subreddits.Batch(50).ToList();
+                var subredditBatches = subreddits.Batch(25).ToList();
                 for (int i = 0; i < subredditBatches.Count; i++)
                 {
                     var subredditBatch = subredditBatches[i];
