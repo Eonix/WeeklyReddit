@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentScheduler;
 using Newtonsoft.Json;
+using TimeZoneConverter;
 using WeeklyReddit.Services;
 
 namespace WeeklyReddit
@@ -34,7 +35,7 @@ namespace WeeklyReddit
 
             JobManager.JobException += x => Log($"An unhandled exception occurred.{Environment.NewLine}{x.Exception}");
 
-            var targetTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
+            var targetTimeZone = TZConvert.GetTimeZoneInfo("Romance Standard Time");
             var convertedTime = TimeZoneInfo.ConvertTime(DateTimeOffset.Now.Date.AddHours(16), targetTimeZone, TimeZoneInfo.Local);
 
             var registry = new Registry();
