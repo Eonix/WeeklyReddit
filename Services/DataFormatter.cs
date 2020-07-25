@@ -355,10 +355,12 @@ namespace WeeklyReddit.Services
     <!-- ======= Pre-header end ======= -->
     {HeaderTemplate(options.Title, options.IssueDate)}
     {string.Join(string.Empty, options.Trendings.Select(TrendingTemplate))}
-    {string.Join("<hr style=\"width: 590px;opacity: 10%;\" />", options.Subreddits.SelectMany(x => x.TopPosts).Select(BigPostTemplate))}
+    {string.Join(string.Empty, options.Subreddits.SelectMany(x => x.TopPosts).Select(BigPostTemplate))}
   </body>
 </html>
 ";
         public static string GenerateHtml(FormatterOptions options) => BodyTemplate(options);
+        // TODO: Place holder image if no image is in the post.
+        // TODO: Add subreddit name to the description field.
     }
 }
