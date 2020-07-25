@@ -1,79 +1,364 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using MailBodyPack;
 
 namespace WeeklyReddit.Services
 {
     public static class DataFormatter
     {
-        private static MailBodyTemplate GetCustomTemplate()
-        {
-            return MailBodyTemplate.GetDefaultTemplate()
-                .Title(x => $"<h1 style=\"color:#333;margin: 0; padding: 20px 0 0 0;\">{x.Content}</h1>")
-                .Text(x => x.Attributes?.Id == "issue-date"
-                    ? $"<span style=\"color:#333;font-size:12px;\">{x.Content}</span>"
-                    : x.Content)
-                .SubTitle(x =>
-                    x.Attributes?.Id != "section-title"
-                        ? $"<h2>{x.Content}</h2>"
-                        : $"<h2 style=\"color:#369;font-size:16px;margin-bottom:3px;text-transform:uppercase;\">{x.Content}</h2>")
-                .LineBreak(x =>
-                    x.Attributes?.Id != "hr"
-                        ? "<br />"
-                        : "<hr style=\"border-style:none;margin-top:0px;margin-bottom:5px;border-top-style:solid;border-top-color:#9b9b9b;\" />")
-                .Link(CustomLink);
-        }
+        private static string GetTitle(RedditPost post) => post.Nsfw ? $"{post.Title} [NSFW]" : post.Title;
 
-        private static MailBlockFluent AddSection(this MailBlockFluent body, string sectionTitle, IEnumerable<RedditPost> posts)
-        {
-            if (!posts.Any())
-                return body;
+        private static string BigPostTemplate(RedditPost post) => $@"
+    <table border=""0"" width=""100%"" cellpadding=""0"" cellspacing=""0"" bgcolor=""ffffff"">
+      <tbody>
+        <tr>
+          <td height=""15"" style=""font-size: 15px; line-height: 15px;"">&nbsp;</td>
+        </tr>
+        <tr>
+          <td align=""center"">
+            <table border=""0"" align=""center"" width=""590"" cellpadding=""0"" cellspacing=""0"" class=""container590"">
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      border=""0""
+                      width=""590""
+                      align=""left""
+                      cellpadding=""0""
+                      cellspacing=""0""
+                      style=""border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;""
+                      class=""container590""
+                    >
+                      <tbody>
+                        <tr>
+                          <td align=""center"" class=""section-img"">
+                            <a href=""{post.CommentsUrl}"" style="" border-style: none !important; border: 0 !important;""
+                              ><img
+                                src=""{post.ThumbnailUrl}""
+                                style=""display: block; width: 590px;""
+                                width=""590""
+                                border=""0""
+                                alt=""""
+                            /></a>
+                          </td>
+                        </tr>
 
-            var sectionHeader = MailBody.CreateBlock()
-                .SubTitle($"#{sectionTitle}", new { Id = "section-title" })
-                .LineBreak(new { Id = "hr" });
+                        <tr>
+                          <td height=""20"" style=""font-size: 20px; line-height: 20px;"">&nbsp;</td>
+                        </tr>
 
-            var imagesBlock = MailBody.CreateBlock();
-            sectionHeader.Paragraph(imagesBlock);
+                        <tr>
+                          <td
+                            align=""left""
+                            style=""color: #212a2e; font-size: 18px; font-family: 'Source Sans Pro', Helvetica, Calibri, sans-serif; font-weight: 500; line-height: 24px;""
+                            class=""align-center outlook-font""
+                          >
+                            {GetTitle(post)}
+                          </td>
+                        </tr>
 
-            foreach (var post in posts)
-            {
-                if (post.ThumbnailUrl != null)
-                    imagesBlock.Raw($"<img src=\"{post.ThumbnailUrl}\"style=\"margin: 3px;\" />");
+                        <tr>
+                          <td height=""15"" style=""font-size: 15px; line-height: 15px;"">&nbsp;</td>
+                        </tr>
 
-                var postTitle = post.Nsfw ? $"{post.Title} [NSFW]" : post.Title;
-                var postLink = MailBody.CreateBlock()
-                    .Link(post.CommentsUrl, postTitle, new { Id = "post-link", Hint = $"Score: {post.Score} Comments: {post.Comments}" });
+                        <tr>
+                          <td
+                            align=""left""
+                            style=""color: #838383; font-family: 'Source Sans Pro', Helvetica, Calibri, sans-serif; line-height: 20px;font-size:14px;""
+                            class=""align-center outlook-font""
+                          >
+                            <div style=""line-height: 20px"">
+                              Score: {post.Score}. Comments: {post.Comments}
+                            </div>
+                          </td>
+                        </tr>
 
-                sectionHeader.Paragraph(postLink);
-            }
+                        <tr>
+                          <td height=""15"" style=""font-size: 15px; line-height: 15px;"">&nbsp;</td>
+                        </tr>
 
-            return body.Paragraph(sectionHeader);
-        }
+                        <tr>
+                          <td align=""left"">
+                            <table border=""0"" align=""left"" cellpadding=""0"" cellspacing=""0"" class=""container590"">
+                              <tbody>
+                                <tr>
+                                  <td align=""center"">
+                                    <table align=""center"" border=""0"" cellpadding=""0"" cellspacing=""0"">
+                                      <tbody>
+                                        <tr>
+                                          <td
+                                            align=""center""
+                                            style=""color: #5c9085; font-family: 'Source Sans Pro', Helvetica, Calibri, sans-serif; line-height: 22px;""
+                                            class=""outlook-font""
+                                          >
+                                            <div style=""line-height: 22px;"">
+                                              <a href=""{post.CommentsUrl}"" style=""color: #5c9085; text-decoration: none;"">Read more</a>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td height=""15"" style=""font-size: 15px; line-height: 15px;"">&nbsp;</td>
+        </tr>
+      </tbody>
+    </table>";
 
-        public static string GenerateHtml(FormatterOptions options)
-        {
-            var template = GetCustomTemplate();
+        private static string TrendingTemplate(RedditPost post) => @$"
+    <table border=""0"" width=""100%"" cellpadding=""0"" cellspacing=""0"" bgcolor=""ffffff"">
+      <tbody>
+        <tr>
+          <td height=""25"" style=""font-size: 25px; line-height: 25px;"">&nbsp;</td>
+        </tr>
 
-            var body = MailBody.CreateBody(template)
-                .Title(options.Title)
-                .Text($"Issue {options.IssueDate.ToLongDateString()}", new { Id = "issue-date" })
-                .AddSection("trending", options.Trendings);
+        <tr>
+          <td align=""center"">
+            <table border=""0"" align=""center"" width=""590"" cellpadding=""0"" cellspacing=""0"" class=""container590"">
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      border=""0""
+                      width=""590""
+                      align=""left""
+                      cellpadding=""0""
+                      cellspacing=""0""
+                      style=""border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;""
+                      class=""container590""
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            align=""left""
+                            style=""color: #212a2e; font-size: 18px; font-family: 'Source Sans Pro', Helvetica, Calibri, sans-serif; font-weight: 500; line-height: 24px;""
+                            class=""align-center outlook-font""
+                          >
+                            {post.Title}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td align=""left"">
+                            <table border=""0"" align=""left"" cellpadding=""0"" cellspacing=""0"" class=""container590"">
+                              <tbody>
+                                <tr>
+                                  <td align=""center"">
+                                    <table align=""center"" border=""0"" cellpadding=""0"" cellspacing=""0"">
+                                      <tbody>
+                                        <tr>
+                                          <td
+                                            align=""center""
+                                            style=""color: #5c9085; font-family: 'Source Sans Pro', Helvetica, Calibri, sans-serif; line-height: 22px;""
+                                            class=""outlook-font""
+                                          >
+                                            <div style=""line-height: 22px;"">
+                                              <a href=""{post.Url}"" style=""color: #5c9085; text-decoration: none;"" target=""_blank"" rel=""noopener"">Read more</a>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>";
 
-            foreach (var subreddit in options.Subreddits)
-            {
-                body.AddSection(subreddit.Name, subreddit.TopPosts);
-            }
+        private static string HeaderTemplate(string title, DateTime issueDate) => @$"
+    <table border=""0"" width=""100%"" cellpadding=""0"" cellspacing=""0"" bgcolor=""5c9085"">
+      <tr>
+        <td
+          align=""center""
+          style=""background-image: url(http://i.imgur.com/ymD1KR0.jpg); background-size: cover; background-position: top center; background-repeat: no-repeat;""
+          background=""http://i.imgur.com/ymD1KR0.jpg""
+        >
+          <table border=""0"" align=""center"" width=""590"" cellpadding=""0"" cellspacing=""0"" class=""container590"">
+            <tr>
+              <td height=""50"" style=""font-size: 50px; line-height: 50px;"">&nbsp;</td>
+            </tr>
 
-            return body.ToString();
-        }
+            <tr>
+              <td align=""center"">
+                <table
+                  border=""0""
+                  width=""500""
+                  align=""center""
+                  cellpadding=""0""
+                  cellspacing=""0""
+                  style=""border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;""
+                  class=""container590""
+                >
+                  <tr>
+                    <td
+                      align=""center""
+                      style=""color: #ffffff; font-size: 45px; font-family: 'Titillium Web', Helvetica Neue, Calibri, sans-serif; line-height: 35px;""
+                      class=""main-section-header outlook-font""
+                    >
+                      <div style=""line-height: 35px"">
+                        {title}
+                      </div>
+                    </td>
+                  </tr>
 
-        private static string CustomLink(ActionElement actionElement)
-        {
-            if (actionElement.Attributes?.Id == "post-link")
-                return $"<a href=\"{actionElement.Link}\" target=\"_blank\" title=\"{actionElement.Attributes?.Hint ?? string.Empty}\">{actionElement.Content}</a>";
+                  <tr>
+                    <td height=""20"" style=""font-size: 20px; line-height: 20px;"">&nbsp;</td>
+                  </tr>
 
-            return $"<a href='{actionElement.Link}'>{actionElement.Content}</a>";
-        }
+                  <tr>
+                    <td
+                      align=""center""
+                      class=""outlook-font""
+                      style=""color: #eaf5ff; font-size: 15px; font-family: 'Titillium Web', Helvetica Neue, Calibri, sans-serif; line-height: 24px;""
+                    >
+                      <div style=""line-height: 24px"">
+                        Issue {issueDate.ToLongDateString()}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td height=""60"" style=""font-size: 60px; line-height: 60px;"">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>";
+
+        private static string BodyTemplate(FormatterOptions options) => @$"
+<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
+<html xmlns:v=""urn:schemas-microsoft-com:vml"">
+  <head>
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width; initial-scale=1.0; maximum-scale=1.0;"" />
+    <meta name=""viewport"" content=""width=600,initial-scale = 2.3,user-scalable=no"" />
+    <!--[if !mso]><!-- -->
+    <link href=""https://fonts.googleapis.com/css?family=Titillium+Web"" rel=""stylesheet"" />
+    <link href=""https://fonts.googleapis.com/css?family=Source+Sans+Pro"" rel=""stylesheet"" />
+    <!--<![endif]-->
+
+    <title>{options.Title}</title>
+
+    <style type=""text/css"">
+      html,
+      body {{
+        -webkit-font-smoothing: antialiased;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+      }}
+
+      @media only screen and (max-width: 640px) {{
+        /*------ top header ------ */
+        .header-main {{
+          font-size: 22px !important;
+        }}
+        .main-section-header {{
+          font-size: 28px !important;
+        }}
+        .show {{
+          display: block !important;
+        }}
+        .hide {{
+          display: none !important;
+        }}
+        .align-center {{
+          text-align: center !important;
+        }}
+        .main-image img {{
+          width: 440px !important;
+          height: auto !important;
+        }}
+        .container590 {{
+          width: 440px !important;
+        }}
+        .half-container {{
+          width: 220px !important;
+        }}
+        .main-button {{
+          width: 220px !important;
+        }}
+        .section-img img {{
+          width: 320px !important;
+          height: auto !important;
+        }}
+      }}
+
+      @media only screen and (max-width: 479px) {{
+        .header-main {{
+          font-size: 20px !important;
+        }}
+        .main-section-header {{
+          font-size: 26px !important;
+        }}
+        .container590 {{
+          width: 280px !important;
+        }}
+        .container590 {{
+          width: 280px !important;
+        }}
+        .half-container {{
+          width: 130px !important;
+        }}
+        .section-img img {{
+          width: 280px !important;
+          height: auto !important;
+        }}
+      }}
+    </style>
+    <!--[if gte mso 9]><style type=”text/css”>
+        .outlook-font {{
+          font-family: arial, sans-serif!important;
+        }}
+        </style>
+    <![endif]-->
+  </head>
+
+  <body leftmargin=""0"" topmargin=""0"" marginwidth=""0"" marginheight=""0"">
+    <!-- ======= Pre-header ======= -->
+    <table style=""display:none!important;"">
+      <tr>
+        <td>
+          <div
+            style=""overflow:hidden;display:none;font-size:1px;color:#ffffff;line-height:1px;font-family:Arial;maxheight:0px;max-width:0px;opacity:0;""
+          >
+            Pre-header for the newsletter template
+          </div>
+        </td>
+      </tr>
+    </table>
+    <!-- ======= Pre-header end ======= -->
+    {HeaderTemplate(options.Title, options.IssueDate)}
+    {string.Join(string.Empty, options.Trendings.Select(TrendingTemplate))}
+    {string.Join("<hr style=\"width: 590px;opacity: 10%;\" />", options.Subreddits.SelectMany(x => x.TopPosts).Select(BigPostTemplate))}
+  </body>
+</html>
+";
+        public static string GenerateHtml(FormatterOptions options) => BodyTemplate(options);
     }
 }

@@ -105,6 +105,8 @@ namespace WeeklyReddit
                     FromAddress = appSettings.EmailSettings.FromAddress,
                     To = appSettings.EmailSettings.ToAddress
                 });
+
+                await Task.Delay(TimeSpan.FromSeconds(1)); // Prevent emails from arriving out of order.
             }
 
             _logger.LogInformation("Newsletter sent!");

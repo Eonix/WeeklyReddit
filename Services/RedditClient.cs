@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 namespace WeeklyReddit.Services
 {
@@ -28,9 +29,20 @@ namespace WeeklyReddit.Services
             return client;
         }
 
-        private string ParseThumbnail(string thumbnailUrl)
+        private string GetPreview(JsonElement element)
         {
-            return thumbnailUrl == "self" ? null : thumbnailUrl;
+            var url = element.TryGetProperty("preview", out var preview)
+                ? preview.TryGetProperty("images", out var images)
+                    ? images.EnumerateArray().First().TryGetProperty("source", out var source)
+                        ? source.GetProperty("url").GetString()
+                        : null
+                    : null
+                : null;
+
+            if (!string.IsNullOrEmpty(url))
+                return WebUtility.HtmlDecode(url);
+
+            return element.GetProperty("thumbnail").GetString();
         }
 
         public async Task<IEnumerable<RedditPost>> GetTrendings()
@@ -39,20 +51,25 @@ namespace WeeklyReddit.Services
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync();
-            var jObject = JObject.Parse(content);
+            using var document = JsonDocument.Parse(content);
 
-            return jObject["data"]["children"].Children().Select(child => child["data"]).Select(data =>
-                new RedditPost
-                {
-                    Title = data["title"].Value<string>(),
-                    Url = data["url"].Value<string>(),
-                    CommentsUrl = "https://www.reddit.com" + data["permalink"].Value<string>(),
-                    Comments = data["num_comments"].Value<int>(),
-                    Domain = data["domain"].Value<string>(),
-                    Nsfw = data["over_18"].Value<bool>(),
-                    Score = data["score"].Value<int>(),
-                    ThumbnailUrl = ParseThumbnail(data["thumbnail"].Value<string>())
-                }).ToList();
+            return document.RootElement
+                    .GetProperty("data")
+                    .GetProperty("children")
+                    .EnumerateArray()
+                    .Select(x => x.GetProperty("data"))
+                    .Select(x =>
+                        new RedditPost
+                        {
+                            Title = x.GetProperty("title").GetString(),
+                            Url = x.GetProperty("url").GetString(),
+                            CommentsUrl = "https://www.reddit.com" + x.GetProperty("permalink").GetString(),
+                            Comments = x.GetProperty("num_comments").GetInt32(),
+                            Domain = x.GetProperty("domain").GetString(),
+                            Nsfw = x.GetProperty("over_18").GetBoolean(),
+                            Score = x.GetProperty("score").GetInt32(),
+                            ThumbnailUrl = GetPreview(x)
+                        }).ToList();
         }
 
         public async Task<IEnumerable<Subreddit>> GetSubredditsTopPosts()
@@ -65,22 +82,27 @@ namespace WeeklyReddit.Services
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
-                var jObject = JObject.Parse(content);
+                using var document = JsonDocument.Parse(content);
+                
+                var redditPosts = document.RootElement
+                    .GetProperty("data")
+                    .GetProperty("children")
+                    .EnumerateArray()
+                    .Select(x => x.GetProperty("data"))
+                    .Select(x =>
+                        new RedditPost
+                        {
+                            Title = x.GetProperty("title").GetString(),
+                            Url = x.GetProperty("url").GetString(),
+                            CommentsUrl = "https://www.reddit.com" + x.GetProperty("permalink").GetString(),
+                            Comments = x.GetProperty("num_comments").GetInt32(),
+                            Domain = x.GetProperty("domain").GetString(),
+                            Nsfw = x.GetProperty("over_18").GetBoolean(),
+                            Score = x.GetProperty("score").GetInt32(),
+                            ThumbnailUrl = GetPreview(x)
+                        }).ToList();
 
-                var redditPosts = jObject["data"]["children"].Children().Select(child => child["data"]).Select(data =>
-                    new RedditPost
-                    {
-                        Title = data["title"].Value<string>(),
-                        Url = data["url"].Value<string>(),
-                        CommentsUrl = "https://www.reddit.com" + data["permalink"].Value<string>(),
-                        Comments = data["num_comments"].Value<int>(),
-                        Domain = data["domain"].Value<string>(),
-                        Nsfw = data["over_18"].Value<bool>(),
-                        Score = data["score"].Value<int>(),
-                        ThumbnailUrl = ParseThumbnail(data["thumbnail"].Value<string>())
-                    });
-
-                subreddits.Add(new Subreddit{Name = subreddit, TopPosts = redditPosts});
+                subreddits.Add(new Subreddit { Name = subreddit, TopPosts = redditPosts });
             }
 
             return subreddits;
@@ -120,12 +142,18 @@ namespace WeeklyReddit.Services
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
-                var subscriptions = JObject.Parse(content);
+                using var subscriptions = JsonDocument.Parse(content);
 
-                subreddits.AddRange(subscriptions["data"]["children"].Children()
-                    .Select(child => child["data"]["display_name"].Value<string>()));
 
-                afterToken = subscriptions["data"]["after"]?.Value<string>();
+                subreddits.AddRange(
+                    subscriptions.RootElement
+                        .GetProperty("data")
+                        .GetProperty("children")
+                        .EnumerateArray()
+                        .Select(x => x.GetProperty("data").GetProperty("display_name").GetString())
+                );
+
+                afterToken = subscriptions.RootElement.GetProperty("data").GetProperty("after").GetString();
             } while (afterToken != null);
 
             return subreddits;
@@ -148,9 +176,9 @@ namespace WeeklyReddit.Services
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync();
-            var auth = JObject.Parse(content);
+            using var auth = JsonDocument.Parse(content);
 
-            return auth["access_token"].Value<string>();
+            return auth.RootElement.GetProperty("access_token").GetString();
         }
     }
 }
