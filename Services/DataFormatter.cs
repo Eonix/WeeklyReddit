@@ -5,9 +5,13 @@ namespace WeeklyReddit.Services
 {
     public static class DataFormatter
     {
-        private static string GetTitle(RedditPost post) => post.Nsfw ? $"{post.Title} [NSFW]" : post.Title;
+        private static string GetTitle(RedditPost post) =>
+            post.Nsfw ? $"{post.Title} [NSFW]" : post.Title;
 
-        private static string BigPostTemplate(RedditPost post) => $@"
+        private static string GetImageUrl(RedditPost post) =>
+            string.IsNullOrEmpty(post.ImageUrl) ? "https://www.redditinc.com/assets/images/site/logo.svg" : post.ImageUrl;
+
+        private static string BigPostTemplate(string subreddit, RedditPost post) => $@"
     <table border=""0"" width=""100%"" cellpadding=""0"" cellspacing=""0"" bgcolor=""ffffff"">
       <tbody>
         <tr>
@@ -33,7 +37,7 @@ namespace WeeklyReddit.Services
                           <td align=""center"" class=""section-img"">
                             <a href=""{post.CommentsUrl}"" style="" border-style: none !important; border: 0 !important;""
                               ><img
-                                src=""{post.ThumbnailUrl}""
+                                src=""{GetImageUrl(post)}""
                                 style=""display: block; width: 590px;""
                                 width=""590""
                                 border=""0""
@@ -67,7 +71,7 @@ namespace WeeklyReddit.Services
                             class=""align-center outlook-font""
                           >
                             <div style=""line-height: 20px"">
-                              Score: {post.Score}. Comments: {post.Comments}
+                              Score: {post.Score} Comments: {post.Comments} Subreddit: {subreddit}
                             </div>
                           </td>
                         </tr>
@@ -192,8 +196,8 @@ namespace WeeklyReddit.Services
       <tr>
         <td
           align=""center""
-          style=""background-image: url(http://i.imgur.com/ymD1KR0.jpg); background-size: cover; background-position: top center; background-repeat: no-repeat;""
-          background=""http://i.imgur.com/ymD1KR0.jpg""
+          style=""background-image: url(https://i.imgur.com/9fZc2Wu.png); background-size: cover; background-position: top center; background-repeat: no-repeat;""
+          background=""https://i.imgur.com/9fZc2Wu.png""
         >
           <table border=""0"" align=""center"" width=""590"" cellpadding=""0"" cellspacing=""0"" class=""container590"">
             <tr>
@@ -214,7 +218,7 @@ namespace WeeklyReddit.Services
                   <tr>
                     <td
                       align=""center""
-                      style=""color: #ffffff; font-size: 45px; font-family: 'Titillium Web', Helvetica Neue, Calibri, sans-serif; line-height: 35px;""
+                      style=""color: #ffffff; font-size: 45px; font-family: 'Titillium Web', Helvetica Neue, Calibri, sans-serif; line-height: 35px;text-shadow: black 0.1em 0.1em 0.2em;""
                       class=""main-section-header outlook-font""
                     >
                       <div style=""line-height: 35px"">
@@ -231,7 +235,7 @@ namespace WeeklyReddit.Services
                     <td
                       align=""center""
                       class=""outlook-font""
-                      style=""color: #eaf5ff; font-size: 15px; font-family: 'Titillium Web', Helvetica Neue, Calibri, sans-serif; line-height: 24px;""
+                      style=""color: #eaf5ff; font-size: 15px; font-family: 'Titillium Web', Helvetica Neue, Calibri, sans-serif; line-height: 24px;text-shadow: black 0.1em 0.1em 0.2em;""
                     >
                       <div style=""line-height: 24px"">
                         Issue {issueDate.ToLongDateString()}
@@ -355,12 +359,10 @@ namespace WeeklyReddit.Services
     <!-- ======= Pre-header end ======= -->
     {HeaderTemplate(options.Title, options.IssueDate)}
     {string.Join(string.Empty, options.Trendings.Select(TrendingTemplate))}
-    {string.Join(string.Empty, options.Subreddits.SelectMany(x => x.TopPosts).Select(BigPostTemplate))}
+    {string.Join(string.Empty, options.Subreddits.SelectMany(x => x.TopPosts.Select(z => BigPostTemplate(x.Name, z))))}
   </body>
 </html>
 ";
         public static string GenerateHtml(FormatterOptions options) => BodyTemplate(options);
-        // TODO: Place holder image if no image is in the post.
-        // TODO: Add subreddit name to the description field.
     }
 }

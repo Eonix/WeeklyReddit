@@ -7,7 +7,7 @@
         public string CommentsUrl { get; set; }
         public string Domain { get; set; }
         public int Score { get; set; }
-        public string ThumbnailUrl { get; set; }
+        public string ImageUrl { get; set; }
         public bool Nsfw { get; set; }
         public int Comments { get; set; }
     }

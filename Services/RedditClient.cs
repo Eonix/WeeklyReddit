@@ -42,7 +42,8 @@ namespace WeeklyReddit.Services
             if (!string.IsNullOrEmpty(url))
                 return WebUtility.HtmlDecode(url);
 
-            return element.GetProperty("thumbnail").GetString();
+            var thumbnailUrl = element.GetProperty("thumbnail").GetString();
+            return thumbnailUrl?.StartsWith("http") is true ? thumbnailUrl : null;
         }
 
         public async Task<IEnumerable<RedditPost>> GetTrendings()
@@ -68,7 +69,7 @@ namespace WeeklyReddit.Services
                             Domain = x.GetProperty("domain").GetString(),
                             Nsfw = x.GetProperty("over_18").GetBoolean(),
                             Score = x.GetProperty("score").GetInt32(),
-                            ThumbnailUrl = GetPreview(x)
+                            ImageUrl = GetPreview(x)
                         }).ToList();
         }
 
@@ -99,7 +100,7 @@ namespace WeeklyReddit.Services
                             Domain = x.GetProperty("domain").GetString(),
                             Nsfw = x.GetProperty("over_18").GetBoolean(),
                             Score = x.GetProperty("score").GetInt32(),
-                            ThumbnailUrl = GetPreview(x)
+                            ImageUrl = GetPreview(x)
                         }).ToList();
 
                 subreddits.Add(new Subreddit { Name = subreddit, TopPosts = redditPosts });
