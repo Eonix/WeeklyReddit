@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/runtime:3.1
-COPY bin/Release/netcoreapp3.1/publish/ ./
+FROM mcr.microsoft.com/dotnet/runtime:5.0
+COPY bin/Release/net5/publish/ ./
 
 ENTRYPOINT ["dotnet", "WeeklyReddit.dll"]

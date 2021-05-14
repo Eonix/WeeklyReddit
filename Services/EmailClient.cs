@@ -21,10 +21,10 @@ namespace WeeklyReddit.Services
         {
             var mimeMessage = new MimeMessage();
             mimeMessage.From.Add(new MailboxAddress(content.FromName, content.FromAddress));
-            mimeMessage.To.Add(new MailboxAddress(content.To));
+            mimeMessage.To.Add(MailboxAddress.Parse(content.To));
             mimeMessage.Subject = content.Subject;
 
-            mimeMessage.Body = new TextPart("html") {Text = content.Content};
+            mimeMessage.Body = new TextPart("html") { Text = content.Content };
 
             await _smtpClient.ConnectAsync(_options.SmtpServer, _options.SmtpPort);
             await _smtpClient.AuthenticateAsync(_options.Username, _options.Password);
